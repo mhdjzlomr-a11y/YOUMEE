@@ -36,7 +36,11 @@ export const viewport: Viewport = {
   themeColor: "#2f5cf0",
 };
 
-export default function RootLayout({ children }: LayoutProps<"/">) {
+export default function RootLayout({
+  children,
+}: Readonly<{
+  children: React.ReactNode;
+}>) {
   return (
     <html lang="en" className="h-full antialiased">
       <body className="min-h-dvh bg-[#eef2fb] text-slate-900 overflow-x-hidden">

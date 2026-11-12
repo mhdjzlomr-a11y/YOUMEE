@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { createSeedTasks } from "../lib/defaultTasks";
-import { isValidPushSubscription } from "../lib/pushStore";
+import { isValidPushSubscription, withBasePath } from "../lib/notifications";
 import {
   computeCategoryStats,
   countActiveStreak,
@@ -175,4 +175,5 @@ test("isValidPushSubscription validates HTTPS endpoint and VAPID keys", () => {
     false
   );
   assert.equal(isValidPushSubscription({ endpoint: "https://ok" }), false);
+  assert.equal(withBasePath("/sw.js").endsWith("/sw.js"), true);
 });

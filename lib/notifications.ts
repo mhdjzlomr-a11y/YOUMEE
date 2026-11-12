@@ -10,11 +10,35 @@ export interface NotificationEnvironment {
   vapidConfigured: boolean;
 }
 
+const BASE_PATH = process.env.NEXT_PUBLIC_BASE_PATH || "";
+
+export function withBasePath(path: string): string {
+  return `${BASE_PATH}${path}`;
+}
+
 export function getVapidPublicKey(): string {
   return process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY?.trim() || "";
 }
 
-export function urlBase64ToUint8Array(base64String: string): Uint8Array<ArrayBuffer> {
+export function isValidPushSubscription(
+  input: unknown
+): input is SerializedPushSubscription {
+  if (!input || typeof input !== "object") return false;
+  const candidate = input as Partial<SerializedPushSubscription>;
+  return (
+    typeof candidate.endpoint === "string" &&
+    candidate.endpoint.startsWith("https://") &&
+    Boolean(candidate.keys) &&
+    typeof candidate.keys?.p256dh === "string" &&
+    candidate.keys.p256dh.length > 0 &&
+    typeof candidate.keys?.auth === "string" &&
+    candidate.keys.auth.length > 0
+  );
+}
+
+export function urlBase64ToUint8Array(
+  base64String: string
+): Uint8Array<ArrayBuffer> {
   const padding = "=".repeat((4 - (base64String.length % 4)) % 4);
   const base64 = (base64String + padding).replace(/-/g, "+").replace(/_/g, "/");
   const rawData = window.atob(base64);
@@ -78,8 +102,8 @@ export async function registerServiceWorker(): Promise<ServiceWorkerRegistration
   }
 
   try {
-    return await navigator.serviceWorker.register("/sw.js", {
-      scope: "/",
+    return await navigator.serviceWorker.register(withBasePath("/sw.js"), {
+      scope: withBasePath("/"),
       updateViaCache: "none",
     });
   } catch {
@@ -93,7 +117,9 @@ export async function getExistingPushSubscription(): Promise<PushSubscription | 
   }
 
   try {
-    const registration = await navigator.serviceWorker.getRegistration("/");
+    const registration = await navigator.serviceWorker.getRegistration(
+      withBasePath("/")
+    );
     if (!registration || !("pushManager" in registration)) return null;
     return await registration.pushManager.getSubscription();
   } catch {
@@ -110,7 +136,8 @@ export async function subscribeDeviceToPush(): Promise<{
   if (!publicKey) {
     return {
       ok: false,
-      reason: "VAPID public key is not configured yet. Local device reminders remain active.",
+      reason:
+        "VAPID public key is not configured. Local Service Worker reminders remain active.",
     };
   }
 
@@ -131,30 +158,13 @@ export async function subscribeDeviceToPush(): Promise<{
   }
 
   const serialized = JSON.parse(JSON.stringify(sub)) as SerializedPushSubscription;
-  const response = await fetch("/api/push/subscribe", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(serialized),
-  });
-
-  if (!response.ok) {
-    return { ok: false, reason: "Failed to register push subscription on server." };
-  }
-
   return { ok: true, subscription: serialized };
 }
 
 export async function unsubscribeDeviceFromPush(): Promise<void> {
   const sub = await getExistingPushSubscription();
   if (!sub) return;
-
-  const endpoint = sub.endpoint;
   await sub.unsubscribe();
-  await fetch("/api/push/subscribe", {
-    method: "DELETE",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ endpoint }),
-  }).catch(() => undefined);
 }
 
 export async function showLocalNotification(payload: {
@@ -170,18 +180,21 @@ export async function showLocalNotification(payload: {
     return false;
   }
 
+  const iconUrl = withBasePath("/icons/icon-192x192.png");
+  const targetUrl = payload.url || withBasePath("/");
+
   if ("serviceWorker" in navigator) {
     try {
       const reg =
-        (await navigator.serviceWorker.getRegistration("/")) ||
+        (await navigator.serviceWorker.getRegistration(withBasePath("/"))) ||
         (await navigator.serviceWorker.ready);
       if (reg) {
         await reg.showNotification(payload.title, {
           body: payload.body,
-          icon: "/icons/icon-192x192.png",
-          badge: "/icons/icon-192x192.png",
+          icon: iconUrl,
+          badge: iconUrl,
           tag: payload.tag || "youmee-reminder",
-          data: { url: payload.url || "/" },
+          data: { url: targetUrl },
         });
         return true;
       }
@@ -193,7 +206,7 @@ export async function showLocalNotification(payload: {
   try {
     new Notification(payload.title, {
       body: payload.body,
-      icon: "/icons/icon-192x192.png",
+      icon: iconUrl,
       tag: payload.tag || "youmee-reminder",
     });
     return true;

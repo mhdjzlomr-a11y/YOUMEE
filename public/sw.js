@@ -1,17 +1,31 @@
-const CACHE_NAME = "youmee-daily-v1";
-const CORE_ASSETS = [
-  "/",
-  "/manifest.webmanifest",
-  "/icons/icon-192x192.png",
-  "/icons/icon-512x512.png",
-  "/icons/apple-touch-icon.png",
-];
+const CACHE_NAME = "youmee-daily-v2";
+
+function getBasePath() {
+  try {
+    const scopeUrl = new URL(self.registration.scope);
+    return scopeUrl.pathname.replace(/\/$/, "");
+  } catch {
+    return "";
+  }
+}
+
+function withBase(path) {
+  return `${getBasePath()}${path}`;
+}
 
 self.addEventListener("install", (event) => {
+  const coreAssets = [
+    withBase("/"),
+    withBase("/manifest.webmanifest"),
+    withBase("/icons/icon-192x192.png"),
+    withBase("/icons/icon-512x512.png"),
+    withBase("/icons/apple-touch-icon.png"),
+  ];
+
   event.waitUntil(
     caches
       .open(CACHE_NAME)
-      .then((cache) => cache.addAll(CORE_ASSETS))
+      .then((cache) => cache.addAll(coreAssets))
       .catch(() => undefined)
       .then(() => self.skipWaiting())
   );
@@ -36,7 +50,6 @@ self.addEventListener("fetch", (event) => {
 
   const url = new URL(request.url);
   if (url.origin !== self.location.origin) return;
-  if (url.pathname.startsWith("/api/")) return;
 
   if (request.mode === "navigate") {
     event.respondWith(
@@ -48,7 +61,7 @@ self.addEventListener("fetch", (event) => {
         })
         .catch(async () => {
           const cached = await caches.match(request);
-          return cached || caches.match("/") || Response.error();
+          return cached || caches.match(withBase("/")) || Response.error();
         })
     );
     return;
@@ -71,10 +84,11 @@ self.addEventListener("fetch", (event) => {
 });
 
 self.addEventListener("push", (event) => {
+  const iconUrl = withBase("/icons/icon-192x192.png");
   let payload = {
     title: "YOUMEE Daily",
     body: "You have a scheduled task reminder.",
-    url: "/",
+    url: withBase("/"),
     tag: "youmee-reminder",
   };
 
@@ -93,35 +107,37 @@ self.addEventListener("push", (event) => {
   event.waitUntil(
     self.registration.showNotification(payload.title, {
       body: payload.body,
-      icon: "/icons/icon-192x192.png",
-      badge: "/icons/icon-192x192.png",
+      icon: iconUrl,
+      badge: iconUrl,
       tag: payload.tag || "youmee-reminder",
       renotify: true,
       vibrate: [120, 60, 120],
-      data: { url: payload.url || "/" },
+      data: { url: payload.url || withBase("/") },
     })
   );
 });
 
 self.addEventListener("message", (event) => {
   if (!event.data || event.data.type !== "SHOW_LOCAL_NOTIFICATION") return;
+  const iconUrl = withBase("/icons/icon-192x192.png");
   const { title, body, tag, url } = event.data.payload || {};
   event.waitUntil(
     self.registration.showNotification(title || "YOUMEE Daily", {
       body: body || "Scheduled task reminder",
-      icon: "/icons/icon-192x192.png",
-      badge: "/icons/icon-192x192.png",
+      icon: iconUrl,
+      badge: iconUrl,
       tag: tag || "youmee-local-reminder",
       renotify: true,
       vibrate: [120, 60, 120],
-      data: { url: url || "/" },
+      data: { url: url || withBase("/") },
     })
   );
 });
 
 self.addEventListener("notificationclick", (event) => {
   event.notification.close();
-  const targetUrl = (event.notification.data && event.notification.data.url) || "/";
+  const targetUrl =
+    (event.notification.data && event.notification.data.url) || withBase("/");
 
   event.waitUntil(
     self.clients

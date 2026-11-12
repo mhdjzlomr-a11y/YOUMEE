@@ -596,40 +596,14 @@ function DailyTrackerClient() {
     });
   };
 
-  const handleSendServerPushTest = async (): Promise<{
-    ok: boolean;
-    message: string;
-  }> => {
+  const handleCopyPushSubscription = async (): Promise<boolean> => {
     try {
       const sub = await getExistingPushSubscription();
-      const response = await fetch("/api/push/send", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          title: "YOUMEE Web Push",
-          body: "Server push notification delivered to your phone!",
-          subscription: sub ? JSON.parse(JSON.stringify(sub)) : undefined,
-        }),
-      });
-      const data = (await response.json()) as {
-        ok?: boolean;
-        error?: string;
-      };
-      if (!response.ok || !data.ok) {
-        return {
-          ok: false,
-          message: data.error || "Could not send server push notification.",
-        };
-      }
-      return {
-        ok: true,
-        message: "Server Web Push sent successfully!",
-      };
+      if (!sub || !navigator.clipboard) return false;
+      await navigator.clipboard.writeText(JSON.stringify(sub, null, 2));
+      return true;
     } catch {
-      return {
-        ok: false,
-        message: "Network error while contacting push endpoint.",
-      };
+      return false;
     }
   };
 
@@ -945,7 +919,7 @@ function DailyTrackerClient() {
         onEnableNotifications={handleEnableNotifications}
         onDisablePush={handleDisablePush}
         onSendLocalTest={handleSendLocalTest}
-        onSendServerPushTest={handleSendServerPushTest}
+        onCopyPushSubscription={handleCopyPushSubscription}
         onPrefsChange={handlePrefsChange}
       />
 

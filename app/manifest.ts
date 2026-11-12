@@ -1,13 +1,17 @@
 import type { MetadataRoute } from "next";
 
+export const dynamic = "force-static";
+
+const basePath = process.env.NEXT_PUBLIC_BASE_PATH || "";
+
 export default function manifest(): MetadataRoute.Manifest {
   return {
     name: "YOUMEE Daily — Task Tracker",
     short_name: "YOUMEE",
     description:
       "Mobile-first daily task and worship tracker with scheduled times, local persistence, and push reminders.",
-    start_url: "/",
-    scope: "/",
+    start_url: `${basePath}/`,
+    scope: `${basePath}/`,
     display: "standalone",
     orientation: "portrait",
     background_color: "#eef2fb",
@@ -15,17 +19,17 @@ export default function manifest(): MetadataRoute.Manifest {
     categories: ["productivity", "lifestyle"],
     icons: [
       {
-        src: "/icons/icon-192x192.png",
+        src: `${basePath}/icons/icon-192x192.png`,
         sizes: "192x192",
         type: "image/png",
       },
       {
-        src: "/icons/icon-512x512.png",
+        src: `${basePath}/icons/icon-512x512.png`,
         sizes: "512x512",
         type: "image/png",
       },
       {
-        src: "/icons/icon-maskable-512x512.png",
+        src: `${basePath}/icons/icon-maskable-512x512.png`,
         sizes: "512x512",
         type: "image/png",
         purpose: "maskable",

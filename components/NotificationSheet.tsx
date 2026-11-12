@@ -5,6 +5,7 @@ import {
   Bell,
   BellRing,
   CheckCircle2,
+  Copy,
   Send,
   Share,
   ShieldAlert,
@@ -22,7 +23,7 @@ interface NotificationSheetProps {
   onEnableNotifications: () => Promise<void>;
   onDisablePush: () => Promise<void>;
   onSendLocalTest: () => Promise<boolean>;
-  onSendServerPushTest: () => Promise<{ ok: boolean; message: string }>;
+  onCopyPushSubscription: () => Promise<boolean>;
   onPrefsChange: (next: NotificationPrefs) => void;
 }
 
@@ -35,7 +36,7 @@ export function NotificationSheet({
   onEnableNotifications,
   onDisablePush,
   onSendLocalTest,
-  onSendServerPushTest,
+  onCopyPushSubscription,
   onPrefsChange,
 }: NotificationSheetProps) {
   const [statusMessage, setStatusMessage] = useState<string>("");
@@ -71,12 +72,16 @@ export function NotificationSheet({
     }
   };
 
-  const handleServerPushTest = async () => {
+  const handleCopySubscription = async () => {
     setBusy(true);
     setStatusMessage("");
     try {
-      const res = await onSendServerPushTest();
-      setStatusMessage(res.message);
+      const ok = await onCopyPushSubscription();
+      setStatusMessage(
+        ok
+          ? "Web Push subscription JSON copied to clipboard!"
+          : "No active push subscription found."
+      );
     } finally {
       setBusy(false);
     }
@@ -252,11 +257,11 @@ export function NotificationSheet({
               <button
                 type="button"
                 disabled={busy}
-                onClick={handleServerPushTest}
+                onClick={handleCopySubscription}
                 className="flex min-h-[44px] w-full items-center justify-center gap-2 rounded-2xl border border-blue-200 bg-blue-50 px-4 text-xs font-semibold text-[#2f5cf0] transition hover:bg-blue-100 disabled:opacity-50"
               >
-                <Send className="h-3.5 w-3.5" />
-                Send Server Web Push Test
+                <Copy className="h-3.5 w-3.5" />
+                Copy Push Subscription JSON
               </button>
             )}
           </div>
